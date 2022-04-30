@@ -35,8 +35,8 @@ def retry_message(cols: pd.Series, usecols_or_not: list[bool]) -> str:
 @click.command()
 @click.argument('csv-path', type=click.Path(exists=True))
 @click.option('--omit/--no-omit', default=False, help='omit unused cols')
-@click.option('--copy-all-unused', '-a', is_flag=True, default=False, help='copy all unused cols as comment')
-def main(csv_path: str, omit: bool, copy_all_unused: bool):
+@click.option('--all-unused', '-a', is_flag=True, default=False, help='copy all unused cols as comment')
+def main(csv_path: str, omit: bool, all_unused: bool):
     """spoit: Create a snippet to extract col from csv.
 
     example: You choose ['name', 'email', 'phone'] from users.csv, get the below snippet.
@@ -59,7 +59,7 @@ def main(csv_path: str, omit: bool, copy_all_unused: bool):
 
     click.echo(f'{csv_path}({len(cols)} cols)\n{cols.tolist()}\n')
 
-    if copy_all_unused:
+    if all_unused:
         snippet = build_snippet(cols, [False for _ in range(len(cols))], csv_path, omit=False)
 
         pyperclip.copy(snippet)
