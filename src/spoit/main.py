@@ -5,32 +5,19 @@ import pandas as pd
 import pyperclip
 from pandas.errors import EmptyDataError
 
+from spoit.message import csv_info_message, mode_message
 from .snippet import build_snippet
 
 
 def prompt_usecols_or_not(cols: pd.Index) -> list[bool]:
-    bool_indexes = []
+    usecols_or_not = []
 
     for idx, col in enumerate(cols, start=1):
         msg = f'({idx}/{len(cols)}) "' + click.style(f'{col}', fg='yellow') + '"?'
 
-        use_or_not: bool = click.confirm(msg)
+        usecols_or_not.append(click.confirm(msg))
 
-        bool_indexes.append(use_or_not)
-
-    return bool_indexes
-
-
-def retry_message(cols: pd.Index, usecols_or_not: list[bool]) -> str:
-    usecols = cols[usecols_or_not].tolist()
-
-    if len(usecols) == 0:
-        return '\nYou chose 0 cols, please retry'
-
-    if click.confirm(f'\nYou chose ' + click.style(f'{usecols}', fg='yellow') + ' Retry?'):
-        return 'OK, please retry'
-
-    return ''
+    return usecols_or_not
 
 
 def get_cols(p: Path) -> pd.Index:
@@ -42,10 +29,10 @@ def get_cols(p: Path) -> pd.Index:
 
 
 @click.command()
-@click.argument('csv-path', type=click.Path(exists=True))
-@click.option('--omit/--no-omit', default=False, help='omit unused cols')
+@click.argument('csv-filename', type=click.Path(exists=True))
 @click.option('--all-unused', '-a', is_flag=True, default=False, help='copy all unused cols as comment')
-def main(csv_path: str, omit: bool, all_unused: bool):
+@click.option('--omit/--no-omit', default=False, help='omit unused cols')
+def main(csv_filename: str, all_unused: bool, omit: bool):
     """spoit: Create a snippet to extract col from csv.
 
     example: You choose ['name', 'email', 'phone'] from users.csv, get the below snippet.
@@ -60,38 +47,33 @@ def main(csv_path: str, omit: bool, all_unused: bool):
     ]
     df = pd.read_csv('users.csv', usecols=usecols)
     """
-    p = Path(csv_path)
-    if (not p.is_file()) or (p.suffix != '.csv'):
-        raise click.UsageError(f'{csv_path} is not CSV.')
+    csv_path = Path(csv_filename)
+    if (not csv_path.is_file()) or (csv_path.suffix != '.csv'):
+        raise click.UsageError(f'{csv_filename} is not CSV.')
 
     try:
-        cols = get_cols(p)
+        cols = get_cols(csv_path)
     except EmptyDataError as e:
         raise click.UsageError(f'{e}')
 
-    click.echo(f'{csv_path}({len(cols)} cols)\n{cols.tolist()}\n')
+    click.echo(csv_info_message(cols, csv_filename))
+
+    click.echo(mode_message(all_unused, omit))
 
     if all_unused:
-        snippet = build_snippet(cols, [False for _ in range(len(cols))], csv_path, omit=False)
-
-        pyperclip.copy(snippet)
-        click.echo(click.style(f'👍Copied all unused cols as comment to your clipboard', fg='yellow'))
-
-        exit(0)
-
-    if omit:
-        click.echo(click.style('omit mode: not copy unused cols\n', fg='red'))
+        usecols_or_not = [False for _ in range(len(cols))]
     else:
-        click.echo(click.style('no omit mode: copy unused cols with # \n', fg='green'))
-
-    usecols_or_not = prompt_usecols_or_not(cols)
-    while msg := retry_message(cols, usecols_or_not):
-        click.echo(msg)
         usecols_or_not = prompt_usecols_or_not(cols)
+        usecols = cols[usecols_or_not].tolist()
 
-    snippet = build_snippet(cols, usecols_or_not, csv_path, omit)
+        while click.confirm(f'\nYou chose ' + click.style(f'{usecols}', fg='yellow') + ' Retry?'):
+            click.echo('OK, please retry')
+            usecols_or_not = prompt_usecols_or_not(cols)
+            usecols = cols[usecols_or_not].tolist()
 
+    snippet = build_snippet(cols, usecols_or_not, csv_filename, omit)
     pyperclip.copy(snippet)
+
     click.echo(click.style(f'👍Copied the snippet to your clipboard', fg='green'))
 
 
