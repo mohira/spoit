@@ -3,11 +3,12 @@ from pathlib import Path
 import click
 import pandas as pd
 import pyperclip
+from pandas.errors import EmptyDataError
 
 from .snippet import build_snippet
 
 
-def prompt_usecols_or_not(cols: pd.Series) -> list[bool]:
+def prompt_usecols_or_not(cols: pd.Index) -> list[bool]:
     bool_indexes = []
 
     for idx, col in enumerate(cols, start=1):
@@ -20,7 +21,7 @@ def prompt_usecols_or_not(cols: pd.Series) -> list[bool]:
     return bool_indexes
 
 
-def retry_message(cols: pd.Series, usecols_or_not: list[bool]) -> str:
+def retry_message(cols: pd.Index, usecols_or_not: list[bool]) -> str:
     usecols = cols[usecols_or_not].tolist()
 
     if len(usecols) == 0:
@@ -30,6 +31,14 @@ def retry_message(cols: pd.Series, usecols_or_not: list[bool]) -> str:
         return 'OK, please retry'
 
     return ''
+
+
+def get_cols(p: Path) -> pd.Index:
+    with p.open() as f:
+        if f.readline() == '':
+            raise EmptyDataError(f'{p} is empty. No columns to parse from file')
+
+    return pd.read_csv(p, nrows=0).columns
 
 
 @click.command()
@@ -55,7 +64,10 @@ def main(csv_path: str, omit: bool, all_unused: bool):
     if (not p.is_file()) or (p.suffix != '.csv'):
         raise click.UsageError(f'{csv_path} is not CSV.')
 
-    cols = pd.read_csv(p, nrows=0).columns
+    try:
+        cols = get_cols(p)
+    except EmptyDataError as e:
+        raise click.UsageError(f'{e}')
 
     click.echo(f'{csv_path}({len(cols)} cols)\n{cols.tolist()}\n')
 

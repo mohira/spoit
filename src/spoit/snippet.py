@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def build_snippet(cols: pd.Series, usecols_or_not: list[bool], csv_path: str, omit: False) -> str:
+def build_snippet(cols: pd.Index, usecols_or_not: list[bool], csv_path: str, omit: False) -> str:
     snippet = 'usecols = [\n'
 
     if omit:
