@@ -3,4 +3,4 @@ usecols = [
 	'age',
 	'email',
 ]
-df = pd.read_csv('./testdata/users.csv', usecols=usecols)
+df = pd.read_csv('users.csv', usecols=usecols)

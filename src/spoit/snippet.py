@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def build_snippet(cols: pd.Index, usecols_or_not: list[bool], csv_path: str, omit: False) -> str:
+def build_snippet(cols: pd.Index, usecols_or_not: list[bool], filename: str, omit: False) -> str:
     snippet = 'usecols = [\n'
 
     if omit:
@@ -21,6 +21,6 @@ def build_snippet(cols: pd.Index, usecols_or_not: list[bool], csv_path: str, omi
     snippet += body
     snippet += '\n]\n'
 
-    snippet += f"df = pd.read_csv('{csv_path}', usecols=usecols)\n"
+    snippet += f"df = pd.read_csv('{filename}', usecols=usecols)\n"
 
     return snippet
